@@ -48,6 +48,22 @@ jobs:
           echo "Publicando $REF_PUBLICADA (commit $COMMIT) — evento: $EVENTO"
           cat build-info.json
 
+      # Fica no próprio workflow (e não num script do repositório) para valer
+      # também quando se publica uma versão antiga, que não teria o script.
+      - name: Validar a release (capas do catálogo existem)
+        shell: python
+        run: |
+          import json, os, sys
+          config = json.load(open("config/app-config.json"))
+          catalogo = json.load(open(config["catalogoUrl"]))
+          pasta = config["pastaCapas"]
+          faltando = [pasta + j["capa"] for j in catalogo["jogos"] if not os.path.isfile(pasta + j["capa"])]
+          for f in faltando:
+              print(f"::error::Capa não encontrada: {f}")
+          if faltando:
+              sys.exit(f"Deploy bloqueado: {len(faltando)} capa(s) inexistente(s) em '{pasta}'")
+          print(f"OK: {len(catalogo['jogos'])} capas encontradas em '{pasta}'")
+
       - name: Configurar Pages
         uses: actions/configure-pages@v5
 
